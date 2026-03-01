@@ -2,7 +2,7 @@ import { BadRequestException, Controller, Post, Req, Res, UploadedFile, UseInter
 import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'node:path';
+import { extname, join } from 'node:path';
 
 @Controller('api/channels/v1.0/upload')
 export class DocumentController {
@@ -11,7 +11,7 @@ export class DocumentController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: '../data',
+        destination: join(process.cwd(), 'data'),
         filename: (req, file, callback) => {
           const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
           callback(null, uniqueName + extname(file.originalname));
