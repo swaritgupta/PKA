@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './modules/app.module';
+import { AppModule } from './backend/modules/app.module';
 import * as dotenv from 'dotenv';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
 
   dotenv.config({ path: './src/backend/.env' });
+
+  const app = await NestFactory.create(AppModule);
 
    // Enable CORS
   app.enableCors({
@@ -18,8 +19,9 @@ async function bootstrap() {
   app.setGlobalPrefix('');
 
   const PORT = process.env.PORT || 3000;
-  await app.listen(PORT);
-  console.log(`🚀 Server is running on port ${PORT}`);
+  const HOST = process.env.HOST || '127.0.0.1';
+  await app.listen(Number(PORT), HOST);
+  console.log(`🚀 Server is running on http://${HOST}:${PORT}`);
   console.log(`📚 Personal Knowledge Assistant is initialized`);
 }
 
@@ -27,5 +29,4 @@ bootstrap().catch((err) => {
   console.error('Error starting application:', err);
   process.exit(1);
 });
-
 

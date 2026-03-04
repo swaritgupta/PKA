@@ -3,9 +3,12 @@ import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'node:path';
+import { DocumentService } from '../../services/document/document.service';
+import { EmbeddingProvider } from '../../services/vector/vector.service';
 
-@Controller('api/channels/v1.0/upload')
+@Controller('/api/channels/v1.0/upload')
 export class DocumentController {
+  constructor(private readonly documentService: DocumentService) {}
 
   @Post('')
   @UseInterceptors(
@@ -35,8 +38,14 @@ export class DocumentController {
       throw new BadRequestException('File is required');
     }
     try{
-      console.log('We have file here')
-      
+      const rawProvider =
+        (req.body?.embeddingProvider as string | undefined) ??
+        (req.query?.embeddingProvider as string | undefined);
+      const provider: EmbeddingProvider = rawProvider === 'voyage' ? 'voyage' : 'gemini';
+
+      console.log('We have file here', provider)
+      const result = await this.documentService.createTokens(file, provider);
+      return res.status(200).json(result);
     }
     catch(error){
       return res.status(400).json(error)
