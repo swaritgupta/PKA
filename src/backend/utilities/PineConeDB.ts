@@ -9,7 +9,7 @@ export class PineCone{
     this.pc = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY ?? "",
     });
-    this.index = this.pc.index<UserMessageInterface>({ name: "pkabot" });
+    this.index = this.pc.index<UserMessageInterface>({ name: "pka2bot" });
   }
 
   public getObject(){

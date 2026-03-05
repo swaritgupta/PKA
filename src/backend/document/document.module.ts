@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { DocumentController } from '../../controllers/document/document.controller';
-import { DocumentService } from '../../services/document/document.service';
+import { DocumentController } from './document.controller';
+import { DocumentService } from './document.service';
 import { VectorModule } from '../vector/vector.module';
 
 @Module({

@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AppController } from '../controllers/app.controller'
-import { AppService } from '../services/app.service';
-import { DocumentModule } from '../modules/document/document.module';
+import { AppController } from './app.controller'
+import { AppService } from './app.service';
+import { DocumentModule } from '../document/document.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { DocumentModule } from '../modules/document/document.module';
       envFilePath: 'src/backend/.env',
     }),
     DocumentModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

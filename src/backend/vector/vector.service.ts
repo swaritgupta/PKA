@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { VoyageAiClient } from '../../utilities/VoyageAIClient';
-import { GeminiClient } from '../../utilities/GeminiClient';
-import { Pinecone } from '@pinecone-database/pinecone';
-import { PineCone } from '../../utilities/PineConeDB';
+import { VoyageAiClient } from '../utilities/VoyageAIClient';
+import { GeminiClient } from '../utilities/GeminiClient';
+import { PineCone } from '../utilities/PineConeDB';
 import { randomUUID } from 'crypto';
 
 export type EmbeddingProvider = 'voyage' | 'gemini';
@@ -50,8 +49,12 @@ export class VectorService {
   ) {
     const embeddings: number[][] = [];
     for (const chunk of chunks) {
+      const text = this.extractChunkText(chunk);
+      if (!text) {
+        continue;
+      }
       const result = await voyageClient.getObject().embed({
-        input: chunk.pageContent,
+        input: text,
         model: 'voyage-3.5',
       });
       const vector = result.data?.[0]?.embedding ?? [];
@@ -60,26 +63,24 @@ export class VectorService {
     return embeddings;
   }
 
-  private async createGeminiEmbeddings(chunks: any[], geminiClient: GeminiClient) {
-    try {
-      console.log('in create gemini embedding');
-      const embeddings: number[][] = [];
-      const model = geminiClient.getObject().getGenerativeModel({
-        model: 'gemini-embedding-001',
-      });
+   async createGeminiEmbeddings(chunks: any[], geminiClient: GeminiClient) {
+    console.log('in create gemini embedding');
+    const embeddings: number[][] = [];
+    const model = geminiClient.getObject().getGenerativeModel({
+      model: 'gemini-embedding-001',
+    });
 
-      for (const chunk of chunks) {
-        const result = await model.embedContent(chunk.pageContent);
-        const vector = result.embedding?.values ?? [];
-        embeddings.push(vector);
+    for (const chunk of chunks) {
+      const text = this.extractChunkText(chunk);
+      if (!text) {
+        continue;
       }
-
-      return embeddings;
-    } catch (err) {
-      console.error(err);
-      return [];
+      const result = await model.embedContent(text);
+      const vector = result.embedding?.values ?? [];
+      embeddings.push(vector);
     }
-    
+
+    return embeddings;
   }
 
   // storing the embeddings in vector db
@@ -88,7 +89,7 @@ export class VectorService {
        const chunk = chunks[i];
        const vector = embeddings[i];
        const id = chunk.id ?? randomUUID();
-       const text = chunk.pageContent ?? '';
+       const text = this.extractChunkText(chunk);
 
        if (!vector || vector.length === 0) {
          continue;
@@ -115,6 +116,34 @@ export class VectorService {
       console.error('Error storing vector', err);
     }
   }
+
+  private extractChunkText(chunk: any): string {
+    if (typeof chunk === 'string') {
+      return chunk;
+    }
+    if (typeof chunk?.pageContent === 'string') {
+      return chunk.pageContent;
+    }
+    if (typeof chunk?.text === 'string') {
+      return chunk.text;
+    }
+    return '';
+  }
+
+  //perform semantic search
+  async searchSimilar(embedding: number[],topK: number = 5): Promise<any[]> {
+    try{
+      const results = await this.pc.getObject().query({
+        topK: topK,
+        vector: embedding,
+        includeMetadata: true
+      });
+      return results.matches;
+    }
+    catch(error){
+      console.error('Error searching similar vectors:', error);
+      throw error;
+    }
+    
+  }
 }
-
-

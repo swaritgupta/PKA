@@ -4,12 +4,9 @@ const { PDFParse } = require('pdf-parse');
 import mammoth from 'mammoth';
 import fs from 'fs';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import {
-  EmbeddingProvider,
-  VectorService,
-} from '../vector/vector.service';
-import { VoyageAiClient } from '../../utilities/VoyageAIClient';
-import { GeminiClient } from '../../utilities/GeminiClient';
+import {EmbeddingProvider,VectorService} from '../vector/vector.service';
+import { VoyageAiClient } from '../utilities/VoyageAIClient';
+import { GeminiClient } from '../utilities/GeminiClient';
 
 @Injectable()
 export class DocumentService {

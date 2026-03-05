@@ -3,8 +3,8 @@ import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'node:path';
-import { DocumentService } from '../../services/document/document.service';
-import { EmbeddingProvider } from '../../services/vector/vector.service';
+import { DocumentService } from './document.service';
+import { EmbeddingProvider } from '../vector/vector.service';
 
 @Controller('/api/channels/v1.0/upload')
 export class DocumentController {
