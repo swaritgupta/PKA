@@ -38,6 +38,6 @@ export class AuthController {
 
   @Get('/profile')
   async profile(@Req() req: Request, @Res() res: Response){
-    return {userId: req.session.userId};
+    return res.status(200).json({userId: req.session.userId});
   }
 }

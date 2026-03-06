@@ -32,7 +32,7 @@ export class UserService {
 
   // Fetch one user by Mongo document id
   async findOne(id: string): Promise<User> {
-    const user = await this.userModel.findById(id).exec();
+    const user = await this.userModel.findOne({email: id}).exec();
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
