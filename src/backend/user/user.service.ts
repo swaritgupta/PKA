@@ -1,26 +1,75 @@
-import { Injectable } from '@nestjs/common';
+import {ConflictException,Injectable,NotFoundException} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from '../schemas/user.schema';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+  ) {}
+
+  // Create a new user document in MongoDB
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    // Check for duplicate email before creating the user
+    const existingUser = await this.userModel
+      .findOne({ email: createUserDto.email })
+      .exec();
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
+    }
+
+    const createdUser = new this.userModel(createUserDto);
+    return createdUser.save();
   }
 
-  findAll() {
-    return `This action returns all user`;
+  // Fetch all users from MongoDB
+  async findAll(): Promise<User[]> {
+    return this.userModel.find().exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  // Fetch one user by Mongo document id
+  async findOne(id: string): Promise<User> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return user;
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  // Update a user document and return the updated version
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    if (updateUserDto.email) {
+      // If email is being updated, ensure it is not used by another user
+      const emailOwner = await this.userModel
+        .findOne({ email: updateUserDto.email, _id: { $ne: id } })
+        .exec();
+      if (emailOwner) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(id, updateUserDto, {
+        new: true,
+        runValidators: true,
+      })
+      .exec();
+
+    if (!updatedUser) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return updatedUser;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  // Delete a user document by id
+  async remove(id: string): Promise<User> {
+    const deletedUser = await this.userModel.findByIdAndDelete(id).exec();
+    if (!deletedUser) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return deletedUser;
   }
 }

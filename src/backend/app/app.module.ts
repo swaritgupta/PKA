@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller'
 import { AppService } from './app.service';
 import { DocumentModule } from '../document/document.module';
 import { ChatModule } from '../chat/chat.module';
 import { LlmModule } from '../llm/llm.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -12,10 +14,12 @@ import { LlmModule } from '../llm/llm.module';
       isGlobal: true,
       envFilePath: 'src/backend/.env',
     }),
-    
+    // Create the MongoDB connection used by all Mongoose models
+    MongooseModule.forRoot(process.env.MONGO_DB_URL ?? 'mongodb://localhost:27017/pka2'),
     DocumentModule,
     ChatModule,
     LlmModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
