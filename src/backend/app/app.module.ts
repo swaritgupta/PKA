@@ -4,6 +4,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service';
 import { DocumentModule } from '../document/document.module';
 import { ChatModule } from '../chat/chat.module';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
   imports: [
@@ -11,8 +12,10 @@ import { ChatModule } from '../chat/chat.module';
       isGlobal: true,
       envFilePath: 'src/backend/.env',
     }),
+    
     DocumentModule,
     ChatModule,
+    LlmModule,
   ],
   controllers: [AppController],
   providers: [AppService],
