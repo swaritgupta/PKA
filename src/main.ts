@@ -42,13 +42,13 @@ async function bootstrap() {
   app.use(
     session({
       store: redisStore,
-      secret: process.env.SESSION_SECRET || 'your-secret-key',
+      secret: process.env.SESSION_SECRET || 'HCjsgERD9mlXno204D8F8UQrVjfVw8t3fjIqRgNoKC4lobDYPy2uAnvQe0p3YQUzKE3lsgc',
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        maxAge: 1000 * 60 * 60 * 1, //1 hr
       },
     }),
   );
