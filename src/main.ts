@@ -4,19 +4,44 @@ import * as dotenv from 'dotenv';
 import session from 'express-session';
 import { ValidationPipe } from '@nestjs/common';
 import { connectRedis, redisClient } from './backend/utilities/RedisClient';
-import {RedisStore} from 'connect-redis';
+import { RedisStore } from "connect-redis"; 
+import { resolve } from 'path';
+import { rejects } from 'assert/strict';
+const figlet = require('figlet');
 
+const banner = async (name: string) => {
+  return new Promise((resolve, reject) => {
+    figlet.text(name, (err: any, data: any) => {
+      if(err){
+        console.error("Something went wrong", err);
+        reject(err);
+        return;
+      }
+      console.log(""+data);
+      resolve(data);
+    });
+  });
+};
 async function bootstrap() {
 
   dotenv.config({ path: './src/backend/.env' });
+  const bannerVal = process.env.BANNER;
+  if(!bannerVal){
+    console.error("Banner went missing");
+    return;
+  }
+  await banner(bannerVal);
   await connectRedis();
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   //Enable redis session
+  const redisStore = new RedisStore({
+    client: redisClient
+  });
   app.use(
     session({
-      store: new RedisStore({ client: redisClient }),
+      store: redisStore,
       secret: process.env.SESSION_SECRET || 'your-secret-key',
       resave: false,
       saveUninitialized: false,
