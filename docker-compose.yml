@@ -11,6 +11,7 @@ services:
       - "3000:3000"
     depends_on:
       - redis
+      - mongo
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -21,3 +22,18 @@ services:
     command: redis-server --requirepass GlIt6I8nq2oEuh/LYqf7VWx/nZ+PGbctOIaIp71Krhw=
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+
+  mongo:
+    image: mongo:7
+    container_name: mongo_container
+    ports: 
+      - "27017: 27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  redis_data:
+  mongo_data:
