@@ -7,6 +7,7 @@ import { DocumentModule } from '../document/document.module';
 import { ChatModule } from '../chat/chat.module';
 import { LlmModule } from '../llm/llm.module';
 import { UserModule } from '../user/user.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserModule } from '../user/user.module';
     ChatModule,
     LlmModule,
     UserModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
