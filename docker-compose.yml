@@ -10,8 +10,10 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - redis
-      - mongo
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_healthy
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -30,9 +32,14 @@ services:
     image: mongo:7
     container_name: mongo_container
     ports: 
-      - "27017: 27017"
+      - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   redis_data:
