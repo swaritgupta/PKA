@@ -32,10 +32,15 @@ async function bootstrap() {
   await connectRedis();
   const app = await NestFactory.create(AppModule);
   const isProd = process.env.NODE_ENV === 'production';
+  const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE === 'true';
+  const sessionCookieSameSite =
+    (process.env.SESSION_COOKIE_SAMESITE as 'lax' | 'strict' | 'none' | undefined) ??
+    (sessionCookieSecure ? 'none' : 'lax');
+  console.log("isProd:::", isProd)
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   // Needed when app runs behind a reverse proxy (Nginx/ALB) and secure cookies are enabled.
-  if (isProd) {
+  if (isProd && sessionCookieSecure) {
     const expressApp = app.getHttpAdapter().getInstance();
     if (typeof expressApp.set === 'function') {
       expressApp.set('trust proxy', 1);
@@ -54,12 +59,12 @@ async function bootstrap() {
       secret: process.env.SESSION_SECRET || 'HCjsgERD9mlXno204D8F8UQrVjfVw8t3fjIqRgNoKC4lobDYPy2uAnvQe0p3YQUzKE3lsgc',
       resave: false,
       saveUninitialized: false,
-      proxy: isProd,
+      proxy: sessionCookieSecure,
       rolling: true,
       cookie: {
         httpOnly: true,
-        secure: isProd, // HTTPS only in prod
-        sameSite: isProd ? 'none' : 'lax',
+        secure: sessionCookieSecure,
+        sameSite: sessionCookieSameSite,
         maxAge: 1000 * 60 * 60 * 1, //1 hr
       },
     }),
