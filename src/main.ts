@@ -5,8 +5,6 @@ import session from 'express-session';
 import { ValidationPipe } from '@nestjs/common';
 import { connectRedis, redisClient } from './backend/utilities/RedisClient';
 import { RedisStore } from "connect-redis"; 
-import { resolve } from 'path';
-import { rejects } from 'assert/strict';
 const figlet = require('figlet');
 
 const banner = async (name: string) => {
@@ -33,28 +31,45 @@ async function bootstrap() {
   await banner(bannerVal);
   await connectRedis();
   const app = await NestFactory.create(AppModule);
+  const isProd = process.env.NODE_ENV === 'production';
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+
+  // Needed when app runs behind a reverse proxy (Nginx/ALB) and secure cookies are enabled.
+  if (isProd) {
+    const expressApp = app.getHttpAdapter().getInstance();
+    if (typeof expressApp.set === 'function') {
+      expressApp.set('trust proxy', 1);
+    }
+  }
 
   //Enable redis session
   const redisStore = new RedisStore({
-    client: redisClient
+    client: redisClient,
+    ttl: 60 * 60, // 1 hour session TTL in Redis
   });
   app.use(
     session({
+      name: 'sid',
       store: redisStore,
       secret: process.env.SESSION_SECRET || 'HCjsgERD9mlXno204D8F8UQrVjfVw8t3fjIqRgNoKC4lobDYPy2uAnvQe0p3YQUzKE3lsgc',
       resave: false,
       saveUninitialized: false,
+      proxy: isProd,
+      rolling: true,
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
+        secure: isProd, // HTTPS only in prod
+        sameSite: isProd ? 'none' : 'lax',
         maxAge: 1000 * 60 * 60 * 1, //1 hr
       },
     }),
   );
    // Enable CORS
+  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim());
   app.enableCors({
-    origin: '*',
+    origin: corsOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -73,4 +88,3 @@ bootstrap().catch((err) => {
   console.error('Error starting application:', err);
   process.exit(1);
 });
-

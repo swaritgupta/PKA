@@ -1,9 +1,10 @@
-import {ConflictException,Injectable,NotFoundException} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -21,7 +22,12 @@ export class UserService {
       throw new ConflictException('Email already exists');
     }
 
-    const createdUser = new this.userModel(createUserDto);
+    // Store only hashed password in database.
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const createdUser = new this.userModel({
+      ...createUserDto,
+      password: hashedPassword,
+    });
     return createdUser.save();
   }
 
@@ -32,11 +38,21 @@ export class UserService {
 
   // Fetch one user by Mongo document id
   async findOne(id: string): Promise<User> {
-    const user = await this.userModel.findOne({email: id}).exec();
+    const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
     return user;
+  }
+
+  // Fetch user by email (without password field)
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  // Fetch user by email and explicitly include password for login verification
+  async findByEmailWithPassword(email: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ email }).select('+password').exec();
   }
 
   // Update a user document and return the updated version
@@ -49,6 +65,11 @@ export class UserService {
       if (emailOwner) {
         throw new ConflictException('Email already exists');
       }
+    }
+
+    // Re-hash password if user is updating it.
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
     const updatedUser = await this.userModel

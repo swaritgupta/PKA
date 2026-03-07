@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AuthBody } from '../interfaces/AuthBodyInterface';
 import { UserService } from '../user/user.service';
 import { Request, Response } from 'express';
+import * as bcrypt from 'bcrypt';
 declare module 'express-session' {
   interface SessionData {
     userId: string;
@@ -15,16 +16,34 @@ export class AuthController {
 
   @Post('/login')
   async login(@Body() body: AuthBody, @Req() req: Request, @Res() res: Response){
-    const username = body.username;
-    const email = body.email;
-    const password = body.password;
-    let user = await this.userServiceDB.findOne(email)
+    const email = body?.email?.trim();
+    const password = body?.password;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const user = await this.userServiceDB.findByEmailWithPassword(email);
     if(!user){
       console.error("User not verified");
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    req.session.userId = email;
-    await req.session.save();
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (!passwordMatches) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Regenerate session id on login to prevent session fixation attacks.
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
+    req.session.userId = String(user._id);
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
     return res.json({ message: 'Logged in successfully' });
   }
 
@@ -33,11 +52,15 @@ export class AuthController {
     req.session.destroy((err) => {
       if(err) console.error('Session destroy error:', err);
     });
+    res.clearCookie('sid');
     return res.json({ message: 'Logged out' });
   }
 
   @Get('/profile')
   async profile(@Req() req: Request, @Res() res: Response){
+    if (!req.session.userId) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
     return res.status(200).json({userId: req.session.userId});
   }
 }
