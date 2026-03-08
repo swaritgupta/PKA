@@ -4,12 +4,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
+import { UserData, UserDataDocument } from '../schemas/user-data.schema';
 import * as bcrypt from 'bcrypt';
+import { ChatTurn } from '../types/session.types';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(UserData.name) private readonly userDataModel: Model<UserDataDocument>,
   ) {}
 
   // Create a new user document in MongoDB
@@ -92,5 +95,27 @@ export class UserService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
     return deletedUser;
+  }
+
+  // Persist final session chat history to Mongo for research/analytics.
+  async saveSessionHistory(params: {
+    userId: string;
+    sessionId: string;
+    sessionStartedAt: string;
+    sessionEndedAt: string;
+    chatHistory: ChatTurn[];
+  }): Promise<UserData> {
+    const { userId, sessionId, sessionStartedAt, sessionEndedAt, chatHistory } =
+      params;
+
+    const record = new this.userDataModel({
+      userId,
+      sessionId,
+      sessionStartedAt,
+      sessionEndedAt,
+      chatHistory,
+    });
+
+    return record.save();
   }
 }

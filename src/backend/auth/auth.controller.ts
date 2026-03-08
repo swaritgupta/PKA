@@ -4,11 +4,6 @@ import { AuthBody } from '../interfaces/AuthBodyInterface';
 import { UserService } from '../user/user.service';
 import { Request, Response } from 'express';
 import * as bcrypt from 'bcrypt';
-declare module 'express-session' {
-  interface SessionData {
-    userId: string;
-  }
-}
 
 @Controller('/api/channels/v1.0/auth')
 export class AuthController {
@@ -40,6 +35,8 @@ export class AuthController {
     });
 
     req.session.userId = String(user._id);
+    req.session.sessionStartedAt = new Date().toISOString();
+    req.session.chatHistory = [];
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
@@ -49,8 +46,25 @@ export class AuthController {
 
   @Post('/logout')
   async logout(@Req() req: Request, @Res() res: Response){
-    req.session.destroy((err) => {
-      if(err) console.error('Session destroy error:', err);
+    const userId = req.session.userId;
+    const sessionId = req.sessionID;
+    const sessionStartedAt =
+      req.session.sessionStartedAt ?? new Date().toISOString();
+    const chatHistory = req.session.chatHistory ?? [];
+
+    // Persist the in-session chat history before destroying session.
+    if (userId && chatHistory.length > 0) {
+      await this.userServiceDB.saveSessionHistory({
+        userId,
+        sessionId,
+        sessionStartedAt,
+        sessionEndedAt: new Date().toISOString(),
+        chatHistory,
+      });
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      req.session.destroy((err) => (err ? reject(err) : resolve()));
     });
     res.clearCookie('sid');
     return res.json({ message: 'Logged out' });
