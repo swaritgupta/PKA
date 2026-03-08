@@ -7,6 +7,9 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import {EmbeddingProvider,VectorService} from '../vector/vector.service';
 import { VoyageAiClient } from '../utilities/VoyageAIClient';
 import { GeminiClient } from '../utilities/GeminiClient';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { DOCUMENT_PROCESSING_QUEUE,PROCESS_DOCUMENT_JOB} from '../queues/queue.constants';
 
 @Injectable()
 export class DocumentService {
@@ -16,8 +19,28 @@ export class DocumentService {
   constructor(
     private readonly vectorService: VectorService,
     private readonly configService: ConfigService,
+    @InjectQueue(DOCUMENT_PROCESSING_QUEUE) //here we injected our producer 
+    private readonly documentQueue: Queue,
   ) {
     this.geminiClient = new GeminiClient(this.configService);
+  }
+
+  // Queue producer for document upload flow (returns quickly with job metadata).
+  async enqueueDocumentProcessingJob(file: Express.Multer.File, provider: EmbeddingProvider) {
+    return this.documentQueue.add(
+      PROCESS_DOCUMENT_JOB,
+      { file, provider },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+  }
+
+  async getDocumentJobById(id: string) {
+    return this.documentQueue.getJob(id);
   }
 
    async createTokens(

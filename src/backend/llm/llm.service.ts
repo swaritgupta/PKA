@@ -40,14 +40,7 @@ export class LlmService {
   }
 
   private buildPrompt(question: string, context: RetrievedContext[]) {
-    const contextText =
-      context.length > 0
-        ? context
-            .map(
-              (item, idx) =>
-                `[${idx + 1}] id=${item.id} score=${item.score ?? 0}\n${item.text}`,
-            )
-            .join('\n\n')
+    const contextText = context.length > 0 ? context.map((item, idx) => `[${idx + 1}] id=${item.id} score=${item.score ?? 0}\n${item.text}`,).join('\n\n')
         : 'No context available.';
 
     return `

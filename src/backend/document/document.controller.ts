@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Post, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -44,11 +44,39 @@ export class DocumentController {
       const provider: EmbeddingProvider = rawProvider === 'voyage' ? 'voyage' : 'gemini';
 
       console.log('We have file here', provider)
-      const result = await this.documentService.createTokens(file, provider);
-      return res.status(200).json(result);
+      const job = await this.documentService.enqueueDocumentProcessingJob(
+        file,
+        provider,
+      );
+      return res.status(202).json({
+        message: 'Document queued for processing',
+        jobId: job.id,
+      });
     }
     catch(error){
       return res.status(400).json(error)
     }
+  }
+
+  // Optional endpoint to check background document job status.
+  @Get('/jobs/:id')
+  async getJobStatus(@Param('id') id: string, @Res() res: Response) {
+    const job = await this.documentService.getDocumentJobById(id);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    const state = await job.getState();
+    const progress = job.progress();
+    const failedReason = job.failedReason;
+    const result = job.returnvalue;
+
+    return res.status(200).json({
+      id,
+      state,
+      progress,
+      failedReason,
+      result,
+    });
   }
 }

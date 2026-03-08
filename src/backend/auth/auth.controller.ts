@@ -54,7 +54,8 @@ export class AuthController {
 
     // Persist the in-session chat history before destroying session.
     if (userId && chatHistory.length > 0) {
-      await this.userServiceDB.saveSessionHistory({
+      // Queue archival so logout remains fast and non-blocking.
+      await this.authService.enqueueSessionHistoryArchive({
         userId,
         sessionId,
         sessionStartedAt,
